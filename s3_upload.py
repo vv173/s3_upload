@@ -32,19 +32,31 @@ def upload(file_path, s3url, s3_path, S3KEY, S3SECRET):
     path_split = pathlib.Path(s3_path)
     
     s3_client = boto3.client('s3', **client_kwargs)
+    bucket_name = path_split.parts[0]
     remote_path = str(pathlib.Path(*path_split.parts[1:]))
-    s3_client.upload_file(file_path, path_split.parts[0], remote_path)
+
+    s3_client.upload_file(file_path, bucket_name, remote_path)
+
+    md5_s3 = s3_client.head_object(
+            Bucket=bucket_name,
+            Key=remote_path
+        )['ETag'][1:-1]
+    return md5_s3
 
 def md5_verification(file_path):
     with open(file_path, 'rb') as file_to_verif:
         bytes = file_to_verif.read()
         md5_local = hashlib.md5(bytes).hexdigest()
-    print(md5_local)
+    return md5_local
 
 def main():
     args = arguments();
-    upload(args.f, args.s3url, args.s3path, args.s3key, args.s3secret)
-    md5_verification(args.f)
+    if upload(
+        args.f, args.s3url, args.s3path, args.s3key, args.s3secret
+        ) == md5_verification(args.f):
+        print("MD5 verified.")
+    else:
+        print("MD5 verification failed!.")
 
 if __name__ == '__main__':
     main()
