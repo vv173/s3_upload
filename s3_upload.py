@@ -6,10 +6,11 @@
 # Date: 07-01-2021
 
 import boto3
-import pathlib
 import hashlib
 import argparse
 import logging
+import re
+from urllib.parse import urlparse
 from botocore.exceptions import NoCredentialsError, ClientError
 
 def arguments():
@@ -36,15 +37,16 @@ def upload(file_path, s3url, s3_path, S3KEY, S3SECRET):
         'verify': False
         #'use_ssl': True
     }
-    path_split = pathlib.Path(s3_path)
     
     s3_client = boto3.client('s3', **client_kwargs)
 
-    #bucket_name = path_split.parts[0]
-    #remote_path = str(pathlib.Path(*path_split.parts[1:]))
-
-    bucket_name = s3_path.split('/')[0]
-    remote_path = s3_path.replace(bucket_name, '', 1)
+    if bool(re.match('^s3:\/\/(.+?)\/*', s3_path)):
+        path_parse = urlparse(s3_path)
+        bucket_name = path_parse.netloc
+        remote_path = path_parse.path
+    elif bool(re.match('^\/s3\/(.+?)\/*', s3_path)):
+        bucket_name = s3_path.split('/', 3)[2]
+        remote_path = '/' + s3_path.split('/', 3)[3]
 
     try:
         s3_client.upload_file(file_path, bucket_name, remote_path)
@@ -77,7 +79,7 @@ def main():
     logging.info("Running the main program.")
 
     try:
-        args = arguments();
+        args = arguments()
         if upload(
             args.f, args.s3url, args.s3path, args.s3key, args.s3secret
             ) == md5_verification(args.f):
