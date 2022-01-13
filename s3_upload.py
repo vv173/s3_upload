@@ -3,7 +3,7 @@
 # File name: s3_upload.py
 # Description: Exchange-currency-API
 # Author: Viktor Vodnev
-# Date: 07-01-2021
+# Date: 07-01-2022
 
 import boto3
 import hashlib
